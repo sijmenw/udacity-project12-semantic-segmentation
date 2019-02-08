@@ -75,27 +75,19 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     # skip layer
     skip_1 = tf.add(conv_11_4, upsample_1)
 
-    # 1x1 convolution skip
-    conv_11_skip = tf.layers.conv2d(skip_1, num_classes, 1, padding='same',
-                                    kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-
     # deconvolution x2
-    upsample_2 = tf.layers.conv2d_transpose(conv_11_skip, num_classes, 4, 2, padding='same',
+    upsample_2 = tf.layers.conv2d_transpose(skip_1, num_classes, 4, 2, padding='same',
                                             kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     # 1x1 convolution out 3
-    conv_11_skip_2 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='same',
+    conv_11_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='same',
                                       kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     # skip layer 2
-    skip_2 = tf.add(conv_11_skip_2, upsample_2)
+    skip_2 = tf.add(conv_11_3, upsample_2)
 
-    # final 1x1 conv
-    conv_11_out = tf.layers.conv2d(skip_2, num_classes, 1, padding='same',
-                                   kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
-
-    # final deconvolution x2
-    output = tf.layers.conv2d_transpose(conv_11_out, num_classes, 4, 2, padding='same',
+    # final deconvolution x8
+    output = tf.layers.conv2d_transpose(skip_2, num_classes, 16, 8, padding='same',
                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     return output
