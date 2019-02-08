@@ -123,7 +123,7 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     cross_entropy_loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=correct_label))
 
     # adam optimizer
-    train_op = tf.train.AdamOptimizer(1e-4).minimize(cross_entropy_loss)
+    train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
 tests.test_optimize(optimize)
@@ -144,8 +144,26 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param keep_prob: TF Placeholder for dropout keep probability
     :param learning_rate: TF Placeholder for learning rate
     """
+    sess.run(tf.global_variables_initializer())
+
+    print("Start training for {} epochs".format(epochs))
+
     # TODO: Implement function
-    pass
+    for epoch_i in range(epochs):
+        print("Epoch #{}".format(epoch_i))
+
+        for image, label in get_batches_fn(batch_size):
+            _, loss = sess.run([train_op, cross_entropy_loss],
+                               feed_dict={
+                                   keep_prob: 0.5,
+                                   input_image: image,
+                                   correct_label: label,
+                                   learning_rate: 0.001
+                               })
+
+            print(loss)
+
+
 tests.test_train_nn(train_nn)
 
 
@@ -163,6 +181,10 @@ def run():
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
 
+    # own parameters
+    n_epochs = 5
+    batch_size = 4
+
     print("==========\nSession start.\n==========")
     with tf.Session() as sess:
         # Path to vgg model
@@ -174,17 +196,29 @@ def run():
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
 
         # TODO: Build NN using load_vgg, layers, and optimize function
-        print("TODO #1")
+        print("Building NN...")
+        input_image, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, vgg_path)
+        layer_output = layers(layer3_out, layer4_out, layer7_out, num_classes)
+
+        # create placeholders
+        correct_label = tf.placeholder(tf.int32, (batch_size, None, None, None), name="correct_label")
+        learning_rate = tf.placeholder(tf.float32, name='learning_rate')
+
+        logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
 
         # TODO: Train NN using the train_nn function
-        print("TODO #2")
+        print("Training NN...")
+        train_nn(sess, n_epochs, batch_size, get_batches_fn, train_op, cross_entropy_loss, input_image,
+                 correct_label, keep_prob, learning_rate)
 
         # TODO: Save inference data using helper.save_inference_samples
         #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
-        print("TODO #3")
+        print("Saving examples")
+        helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
 
         # OPTIONAL: Apply the trained model to a video
         print("==========\nSession end.\n==========")
+
 
 if __name__ == '__main__':
     run()
