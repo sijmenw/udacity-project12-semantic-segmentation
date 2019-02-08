@@ -6,9 +6,9 @@ import warnings
 from distutils.version import LooseVersion
 import project_tests as tests
 
-
 # Check TensorFlow Version
-assert LooseVersion(tf.__version__) >= LooseVersion('1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
+assert LooseVersion(tf.__version__) >= LooseVersion(
+    '1.0'), 'Please use TensorFlow version 1.0 or newer.  You are using {}'.format(tf.__version__)
 print('TensorFlow Version: {}'.format(tf.__version__))
 
 # Check for a GPU
@@ -48,6 +48,8 @@ def load_vgg(sess, vgg_path):
     layer7_out = graph.get_tensor_by_name(vgg_layer7_out_tensor_name)
 
     return image_input, keep_prob, layer3_out, layer4_out, layer7_out
+
+
 tests.test_load_vgg(load_vgg, tf)
 
 
@@ -81,7 +83,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
 
     # 1x1 convolution out 3
     conv_11_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='same',
-                                      kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
+                                 kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     # skip layer 2
     skip_2 = tf.add(conv_11_3, upsample_2)
@@ -91,6 +93,8 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
                                         kernel_regularizer=tf.contrib.layers.l2_regularizer(1e-3))
 
     return output
+
+
 tests.test_layers(layers)
 
 
@@ -118,6 +122,8 @@ def optimize(nn_last_layer, correct_label, learning_rate, num_classes):
     train_op = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cross_entropy_loss)
 
     return logits, train_op, cross_entropy_loss
+
+
 tests.test_optimize(optimize)
 
 
@@ -153,7 +159,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                                    learning_rate: 0.001
                                })
 
-            print(loss)
+            print("Loss: {}".format(loss))
 
 
 tests.test_train_nn(train_nn)
@@ -162,8 +168,8 @@ tests.test_train_nn(train_nn)
 def run():
     num_classes = 2
     image_shape = (160, 576)  # KITTI dataset uses 160x576 images
-    data_dir = './data'
-    runs_dir = './runs'
+    data_dir = '/data'
+    runs_dir = '/runs'
     tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
@@ -174,8 +180,8 @@ def run():
     #  https://www.cityscapes-dataset.com/
 
     # own parameters
-    n_epochs = 5
-    batch_size = 4
+    n_epochs = 64
+    batch_size = 16
 
     print("==========\nSession start.\n==========")
     with tf.Session() as sess:
@@ -193,7 +199,7 @@ def run():
         layer_output = layers(layer3_out, layer4_out, layer7_out, num_classes)
 
         # create placeholders
-        correct_label = tf.placeholder(tf.int32, (batch_size, None, None, None), name="correct_label")
+        correct_label = tf.placeholder(tf.int32, (None, None, None, None), name="correct_label")
         learning_rate = tf.placeholder(tf.float32, name='learning_rate')
 
         logits, train_op, cross_entropy_loss = optimize(layer_output, correct_label, learning_rate, num_classes)
@@ -207,6 +213,13 @@ def run():
         #  helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
         print("Saving examples")
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, input_image)
+
+        print("saving model...")
+
+        # Save the variables to disk.
+        saver = tf.train.Saver()
+        save_path = saver.save(sess, "/home/workspace/CarND-Semantic-Segmentation/model/model.ckpt")
+        print("Model saved in path: %s" % save_path)
 
         # OPTIONAL: Apply the trained model to a video
         print("==========\nSession end.\n==========")
