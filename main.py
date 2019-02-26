@@ -151,6 +151,9 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
         print("Epoch #{}".format(epoch_i))
 
         for image, label in get_batches_fn(batch_size):
+            # image shape: (batch_size, rows, cols, depth)
+            # labels shape: (batch_size, rows, cols, num_classes)
+
             _, loss = sess.run([train_op, cross_entropy_loss],
                                feed_dict={
                                    keep_prob: 0.5,
@@ -168,8 +171,8 @@ tests.test_train_nn(train_nn)
 def run():
     num_classes = 2
     image_shape = (160, 576)  # KITTI dataset uses 160x576 images
-    data_dir = '/data'
-    runs_dir = '/runs'
+    data_dir = './data'
+    runs_dir = './runs'
     tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
