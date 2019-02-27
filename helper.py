@@ -15,9 +15,16 @@ import shutil
 import zipfile
 import time
 import tensorflow as tf
+from sklearn.utils import shuffle
 from glob import glob
 from urllib.request import urlretrieve
 from tqdm import tqdm
+
+### extra fix
+import os
+
+os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'
+### end extra fix
 
 
 class DLProgress(tqdm):
@@ -39,13 +46,12 @@ class DLProgress(tqdm):
 		self.last_block = block_num
 
 
-def maybe_download_pretrained_vgg(data_dir):
+def maybe_download_pretrained_vgg(vgg_path):
 	"""
 	Download and extract pretrained vgg model if it doesn't exist
 	:param data_dir: Directory to download the model to
 	"""
 	vgg_filename = 'vgg.zip'
-	vgg_path = os.path.join(data_dir, 'vgg')
 	vgg_files = [
 		os.path.join(vgg_path, 'variables/variables.data-00000-of-00001'),
 		os.path.join(vgg_path, 'variables/variables.index'),
@@ -69,55 +75,98 @@ def maybe_download_pretrained_vgg(data_dir):
 		# Extract vgg
 		print('Extracting model...')
 		zip_ref = zipfile.ZipFile(os.path.join(vgg_path, vgg_filename), 'r')
-		zip_ref.extractall(data_dir)
+		zip_ref.extractall(vgg_path)
 		zip_ref.close()
 
 		# Remove zip file to save space
 		os.remove(os.path.join(vgg_path, vgg_filename))
 
 
-def gen_batch_function(data_folder, image_shape):
+def gen_batch_function(data_folder, image_shape, puzzle=False):
 	"""
 	Generate function to create batches of training data
 	:param data_folder: Path to folder that contains all the datasets
 	:param image_shape: Tuple - Shape of image
+	:param puzzle: <bool> switches between batch functions for road data or puzzle data
 	:return:
 	"""
-	def get_batches_fn(batch_size):
-		"""
-		Create batches of training data
-		:param batch_size: Batch Size
-		:return: Batches of training data
-		"""
-		# Grab image and label paths
-		image_paths = glob(os.path.join(data_folder, 'image_2', '*.png'))
-		label_paths = {
-			re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
-			for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
-		background_color = np.array([255, 0, 0])
+	if puzzle:
+		print("Using puzzle batching function")
 
-		# Shuffle training data
-		random.shuffle(image_paths)
-		# Loop through batches and grab images, yielding each batch
-		for batch_i in range(0, len(image_paths), batch_size):
-			images = []
-			gt_images = []
-			for image_file in image_paths[batch_i:batch_i+batch_size]:
-				gt_image_file = label_paths[os.path.basename(image_file)]
-				# Re-size to image_shape
-				image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
-				gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
+		def get_batches_fn(batch_size):
+			"""
+			Create batches of training data
+			:param batch_size: Batch Size
+			:return: Batches of training data
+			"""
+			# Grab image and label paths
+			image_paths = glob(os.path.join(data_folder, 'img', '*.png'))
+			image_paths.sort()
+			label_paths = glob(os.path.join(data_folder, 'mask', '*.png'))
+			label_paths.sort()
 
-				# Create "one-hot-like" labels by class
-				gt_bg = np.all(gt_image == background_color, axis=2)
-				gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
-				gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
+			image_paths, label_paths = shuffle(image_paths, label_paths)
 
-				images.append(image)
-				gt_images.append(gt_image)
+			# Loop through batches and grab images, yielding each batch
+			for batch_start in range(0, len(image_paths), batch_size):
+				# create arrays for images and ground truths
+				images = []
+				gt_images = []
+				batch_end = min(len(image_paths), batch_start + batch_size)
+				for img_i in range(batch_start, batch_end):
+					# Re-size to image_shape
+					image = scipy.misc.imresize(scipy.misc.imread(image_paths[img_i]), image_shape)
+					gt_image = scipy.misc.imresize(scipy.misc.imread(label_paths[img_i]), image_shape)
 
-			yield np.array(images), np.array(gt_images)
-	return get_batches_fn
+					# Create "one-hot-like" labels by class
+					two_d = np.max(gt_image, axis=2)
+					oh = np.zeros((gt_image.shape[0], gt_image.shape[1], 2), dtype=bool)
+					oh[two_d == 1, 1] = 1
+					oh[two_d == 0, 0] = 1
+
+					images.append(image)
+					gt_images.append(oh)
+
+				yield np.array(images), np.array(gt_images)
+
+		return get_batches_fn
+
+	else:
+		def get_batches_fn(batch_size):
+			"""
+			Create batches of training data
+			:param batch_size: Batch Size
+			:return: Batches of training data
+			"""
+			# Grab image and label paths
+			image_paths = glob(os.path.join(data_folder, 'image_2', '*.png'))
+			label_paths = {
+				re.sub(r'_(lane|road)_', '_', os.path.basename(path)): path
+				for path in glob(os.path.join(data_folder, 'gt_image_2', '*_road_*.png'))}
+			background_color = np.array([255, 0, 0])
+
+			# Shuffle training data
+			random.shuffle(image_paths)
+			# Loop through batches and grab images, yielding each batch
+			for batch_i in range(0, len(image_paths), batch_size):
+				images = []
+				gt_images = []
+				for image_file in image_paths[batch_i:batch_i+batch_size]:
+					gt_image_file = label_paths[os.path.basename(image_file)]
+					# Re-size to image_shape
+					image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
+					gt_image = scipy.misc.imresize(scipy.misc.imread(gt_image_file), image_shape)
+
+					# Create "one-hot-like" labels by class
+					gt_bg = np.all(gt_image == background_color, axis=2)
+					gt_bg = gt_bg.reshape(*gt_bg.shape, 1)
+					gt_image = np.concatenate((gt_bg, np.invert(gt_bg)), axis=2)
+
+					images.append(image)
+					gt_images.append(gt_image)
+
+				yield np.array(images), np.array(gt_images)
+		return get_batches_fn
 
 
 def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape):
@@ -131,7 +180,7 @@ def gen_test_output(sess, logits, keep_prob, image_pl, data_folder, image_shape)
 	:param image_shape: Tuple - Shape of image
 	:return: Output for for each test image
 	"""
-	for image_file in glob(os.path.join(data_folder, 'image_2', '*.png')):
+	for image_file in glob(os.path.join(data_folder, 'img', '*.png')):
 		image = scipy.misc.imresize(scipy.misc.imread(image_file), image_shape)
 
 		# Run inference
@@ -171,6 +220,6 @@ def save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_p
 	# Run NN on test images and save them to HD
 	print('Training Finished. Saving test images to: {}'.format(output_dir))
 	image_outputs = gen_test_output(
-		sess, logits, keep_prob, input_image, os.path.join(data_dir, 'data_road/testing'), image_shape)
+		sess, logits, keep_prob, input_image, os.path.join(data_dir, 'testing'), image_shape)
 	for name, image in image_outputs:
 		scipy.misc.imsave(os.path.join(output_dir, name), image)

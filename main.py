@@ -170,28 +170,28 @@ tests.test_train_nn(train_nn)
 
 def run():
     num_classes = 2
-    image_shape = (160, 576)  # KITTI dataset uses 160x576 images
-    data_dir = './data'
+    image_shape = (256, 256)  # KITTI dataset uses 160x576 images
+    data_dir = './puzzle_data'
+    vgg_path = './data/vgg'
     runs_dir = './runs'
-    tests.test_for_kitti_dataset(data_dir)
+    # tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
-    helper.maybe_download_pretrained_vgg(data_dir)
+    helper.maybe_download_pretrained_vgg(vgg_path)
 
     # OPTIONAL: Train and Inference on the cityscapes dataset instead of the Kitti dataset.
     # You'll need a GPU with at least 10 teraFLOPS to train on.
     #  https://www.cityscapes-dataset.com/
 
     # own parameters
-    n_epochs = 64
-    batch_size = 16
+    n_epochs = 1
+    batch_size = 4
 
     print("==========\nSession start.\n==========")
     with tf.Session() as sess:
         # Path to vgg model
-        vgg_path = os.path.join(data_dir, 'vgg')
         # Create function to get batches
-        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
+        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'training'), image_shape, puzzle=True)
 
         # OPTIONAL: Augment Images for better results
         #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
@@ -221,7 +221,7 @@ def run():
 
         # Save the variables to disk.
         saver = tf.train.Saver()
-        save_path = saver.save(sess, "/home/workspace/CarND-Semantic-Segmentation/model/model.ckpt")
+        save_path = saver.save(sess, "./model/puzzle_model.ckpt")
         print("Model saved in path: %s" % save_path)
 
         # OPTIONAL: Apply the trained model to a video
