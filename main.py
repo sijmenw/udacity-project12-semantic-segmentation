@@ -1,10 +1,29 @@
 #!/usr/bin/env python3
+#
+# Trains an FCN on images and masks, uses pre-trained VGG network as a starting point
+#
+#
+
 import os.path
 import tensorflow as tf
 import helper
 import warnings
+import argparse
 from distutils.version import LooseVersion
 import project_tests as tests
+
+
+parser = argparse.ArgumentParser(description='Train FCN')
+parser.add_argument('--data', type=str,
+                    help='Location of data directory to import')
+parser.add_argument('--vgg', type=str,
+                    help='Location of vgg model')
+parser.add_argument('--output', type=str,
+                    help='Output directory for trained model')
+parser.add_argument('--run', type=str,
+                    help='Output directory for test images')
+args = parser.parse_args()
+
 
 # Check TensorFlow Version
 assert LooseVersion(tf.__version__) >= LooseVersion(
@@ -168,12 +187,12 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
 tests.test_train_nn(train_nn)
 
 
-def run():
+def run(data_arg, vgg_arg, output_arg, run_arg):
     num_classes = 2
-    image_shape = (256, 256)  # KITTI dataset uses 160x576 images
-    data_dir = './puzzle_data'
-    vgg_path = './data/vgg'
-    runs_dir = './runs'
+    image_shape = (256, 256)  # KITTI dataset uses 160x576 images, puzzle dataset uses 256x256
+    data_dir = data_arg
+    vgg_path = vgg_arg
+    runs_dir = run_arg
     # tests.test_for_kitti_dataset(data_dir)
 
     # Download pretrained vgg model
@@ -221,7 +240,7 @@ def run():
 
         # Save the variables to disk.
         saver = tf.train.Saver()
-        save_path = saver.save(sess, "./model/puzzle_model.ckpt")
+        save_path = saver.save(sess, output_arg)
         print("Model saved in path: %s" % save_path)
 
         # OPTIONAL: Apply the trained model to a video
@@ -229,4 +248,32 @@ def run():
 
 
 if __name__ == '__main__':
-    run()
+    # training and testing data directory
+    data_arg = args.data
+    if data_arg == "":
+        data_arg = './puzzle_data'
+    tests.test_data_source(data_arg)
+
+    # vgg location directory
+    vgg_arg = args.vgg
+    if vgg_arg == "":
+        vgg_arg = './data/vgg'
+
+    # trained model output file location
+    # create directory if not exists
+    output_arg = args.output
+    if output_arg == "":
+        output_arg = "./model/puzzle_model.ckpt"
+    output_dirname = os.path.dirname(output_arg)
+    if not os.path.exists(output_dirname):
+        os.makedirs(output_dirname)
+
+    # output of run over test images
+    # create directory if not exists
+    run_arg = args.run
+    if run_arg == "":
+        run_arg = './runs'
+    if not os.path.exists(output_dirname):
+        os.makedirs(output_dirname)
+
+    run(data_arg, vgg_arg, output_arg, run_arg)

@@ -191,3 +191,22 @@ def test_for_kitti_dataset(data_dir):
     assert training_images_count == 289, 'Expected 289 training images, found {} images.'.format(training_images_count)
     assert training_labels_count == 289, 'Expected 289 training labels, found {} labels.'.format(training_labels_count)
     assert testing_images_count == 290, 'Expected 290 testing images, found {} images.'.format(testing_images_count)
+
+
+@test_safe
+def test_data_source(data_dir):
+    train_img_dir = os.path.join(data_dir, "training", "img")
+    n = len(os.listdir(train_img_dir))
+    assert n > 10, 'Expected >10 training images, found {} images.'.format(n)
+
+    train_mask_dir = os.path.join(data_dir, "training", "mask")
+    n = len(os.listdir(train_mask_dir))
+    assert n > 10, 'Expected >10 training masks, found {} images.'.format(n)
+
+    test_img_dir = os.path.join(data_dir, "testing", "mask")
+    n = len(os.listdir(test_img_dir))
+    assert n > 10, 'Expected >10 testing images, found {} images.'.format(n)
+
+    test_mask_dir = os.path.join(data_dir, "testing", "mask")
+    n = len(os.listdir(test_mask_dir))
+    assert n > 10, 'Expected >10 testing masks, found {} images.'.format(n)
