@@ -217,7 +217,7 @@ def run(data_arg, vgg_arg, output_arg, run_arg):
 
         # TODO: Build NN using load_vgg, layers, and optimize function
         print("Building NN...")
-        input_image, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, vgg_path)
+        input_image, keep_prob, layer3_out, layer4_out, layer7_out = load_vgg(sess, os.path.join(vgg_path, "vgg"))
         layer_output = layers(layer3_out, layer4_out, layer7_out, num_classes)
 
         # create placeholders
@@ -250,19 +250,21 @@ def run(data_arg, vgg_arg, output_arg, run_arg):
 if __name__ == '__main__':
     # training and testing data directory
     data_arg = args.data
-    if data_arg == "":
+    if data_arg == "" or data_arg is None:
         data_arg = './puzzle_data'
     tests.test_data_source(data_arg)
 
     # vgg location directory
     vgg_arg = args.vgg
-    if vgg_arg == "":
-        vgg_arg = './data/vgg'
+    if vgg_arg == "" or vgg_arg is None:
+        vgg_arg = './data/'
+
+    print("VGG ARG: {}".format(vgg_arg))
 
     # trained model output file location
     # create directory if not exists
     output_arg = args.output
-    if output_arg == "":
+    if output_arg == "" or output_arg is None:
         output_arg = "./model/puzzle_model.ckpt"
     output_dirname = os.path.dirname(output_arg)
     if not os.path.exists(output_dirname):
@@ -271,7 +273,7 @@ if __name__ == '__main__':
     # output of run over test images
     # create directory if not exists
     run_arg = args.run
-    if run_arg == "":
+    if run_arg == "" or run_arg is None:
         run_arg = './runs'
     if not os.path.exists(output_dirname):
         os.makedirs(output_dirname)

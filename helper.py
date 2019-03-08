@@ -49,13 +49,13 @@ class DLProgress(tqdm):
 def maybe_download_pretrained_vgg(vgg_path):
 	"""
 	Download and extract pretrained vgg model if it doesn't exist
-	:param data_dir: Directory to download the model to
+	:param vgg_path: Directory to download the model to (model top dir)
 	"""
 	vgg_filename = 'vgg.zip'
 	vgg_files = [
-		os.path.join(vgg_path, 'variables/variables.data-00000-of-00001'),
-		os.path.join(vgg_path, 'variables/variables.index'),
-		os.path.join(vgg_path, 'saved_model.pb')]
+		os.path.join(vgg_path, 'vgg', 'variables/variables.data-00000-of-00001'),
+		os.path.join(vgg_path, 'vgg', 'variables/variables.index'),
+		os.path.join(vgg_path, 'vgg', 'saved_model.pb')]
 
 	missing_vgg_files = [vgg_file for vgg_file in vgg_files if not os.path.exists(vgg_file)]
 	if missing_vgg_files:
