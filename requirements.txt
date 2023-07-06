@@ -57,7 +57,7 @@ pyzmq==17.1.2
 qtconsole==4.4.3
 scikit-image==0.14.2
 scikit-learn==0.20.2
-scipy==1.2.1
+scipy==1.10.0
 Send2Trash==1.5.0
 Shapely==1.6.4.post2
 six==1.12.0
