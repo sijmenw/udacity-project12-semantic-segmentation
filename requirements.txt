@@ -39,7 +39,7 @@ networkx==2.2
 notebook==6.4.12
 numpy==1.22.0
 opencv-contrib-python==4.2.0.32
-opencv-python==4.2.0.32
+opencv-python==4.8.1.78
 pandocfilters==1.4.2
 parso==0.5.0
 pexpect==4.6.0
